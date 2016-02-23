@@ -9,5 +9,6 @@ gulp.task('default', function() {
         .pipe(jshint.reporter('default'))
         .pipe(uglify())
         .pipe(concat('ore.min.js'))
-        .pipe(gulp.dest('lib'));
+        .pipe(gulp.dest('lib'))
+        .pipe(gulp.dest('examples/game/js'));
 });
