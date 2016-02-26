@@ -1,31 +1,13 @@
 /*
 * ORE - Online Roguelike Engine
-* Copyright (C) 2016  Mark Purser
 *
-* Tile rendering based on yendor.ts
+* Copyright (C) 2016  Mark Purser
+* Released under the MIT license
+* http://github.com/markpurser/ORE/LICENSE
+*
+* Tile rendering based on
 * https://github.com/jice-nospam/yendor.ts
 * Copyright (c) 2014 Jice
-*
-* Permission is hereby granted, free of charge, to any person
-* obtaining a copy of this software and associated documentation
-* files (the "Software"), to deal in the Software without
-* restriction, including without limitation the rights to use,
-* copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to whom the
-* Software is furnished to do so, subject to the following
-* conditions:
-* 
-* The above copyright notice and this permission notice shall be
-* included in all copies or substantial portions of the Software.
-* 
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-* OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-* NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-* HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-* WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-* FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-* OTHER DEALINGS IN THE SOFTWARE.
 */
 
 /**
@@ -91,9 +73,9 @@ this.ORE = this.ORE || {};
 
             // init tile textures
             var tileTextures = [];
-            _.each(_.range(numTilesX), function(x)
+            _.range(numTilesX).forEach(function(x)
             {
-                _.each(_.range(numTilesY), function(y)
+                _.range(numTilesY).forEach(function(y)
                 {
                     var rect = new PIXI.Rectangle(x * tileWidthPx, y * tileHeightPx, tileWidthPx, tileHeightPx);
                     tileTextures[x + y * numTilesX] = new PIXI.Texture(resources.tilesheet.texture, rect);
@@ -102,9 +84,9 @@ this.ORE = this.ORE || {};
 
             // init tile buffer
             var buffer = [];
-            _.each(_.range(bufferWidth), function(x)
+            _.range(bufferWidth).forEach(function(x)
             {
-                _.each(_.range(bufferHeight), function(y)
+                _.range(bufferHeight).forEach(function(y)
                 {
                     buffer[x + y * bufferWidth] = _.random(63);
                 });
@@ -112,9 +94,9 @@ this.ORE = this.ORE || {};
 
             // init game sprites
             var sprites = [];    
-            _.each(_.range(mapViewWidth), function(x)
+            _.range(mapViewWidth).forEach(function(x)
             {
-                _.each(_.range(mapViewHeight), function(y)
+                _.range(mapViewHeight).forEach(function(y)
                 {
                     var sprite = new PIXI.Sprite(tileTextures[0]);
                     sprite.position.x = x * tileWidthPx;
@@ -135,10 +117,10 @@ this.ORE = this.ORE || {};
                     ORE.updateStats(stats);
                 }
 
-                _.each(_.range(mapViewHeight), function(y)
+                for(var y = 0; y < mapViewHeight; y++)
                 {
                     var offset = bufferX + (y + bufferY) * bufferWidth;
-                    _.each(_.range(mapViewWidth), function(x)
+                    for(var x = 0; x < mapViewWidth; x++)
                     {
                         var tileCode = buffer[offset++];
                         sprites[x + y * mapViewWidth].texture = tileTextures[tileCode];
