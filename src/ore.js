@@ -27,6 +27,8 @@ this.ORE = this.ORE || {};
         var mapViewWidth = oreOptions.mapViewWidth;
         var mapViewHeight = oreOptions.mapViewHeight;
 
+        this._buffer = new ORE.Buffer(mapViewWidth, mapViewHeight);
+
         var loader = PIXI.loader;
         loader.add('tilesheet', oreOptions.tilesheetImage);
         loader.load( function( loader, resources )
@@ -124,8 +126,8 @@ this.ORE = this.ORE || {};
                     {
                         var tileCode = buffer[offset++];
                         sprites[x + y * mapViewWidth].texture = tileTextures[tileCode];
-                    });
-                });
+                    }
+                }
 
                 requestAnimationFrame(animate);
 
