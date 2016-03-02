@@ -37,6 +37,7 @@ this.ORE = this.ORE || {};
         console.log("Hello from Buffer::initialise");
     };
 
+    // Create an undirected grid graph of pages
     p.makeGridGraph = function()
     {
         var queue = new Queue();
@@ -52,38 +53,47 @@ this.ORE = this.ORE || {};
         this.makeAdjacencyList(queue);
     };
 
-    p.makeAdjacencyList = function(queue)
+    p.makeAdjacencyList = function(allPagesQ)
     {
-        var localQueue = new Queue();
+        var rowQ = new Queue();
         var adjacencyList = [];
+        var width = Buffer._bufferWidth;
 
-        // first row
-        for(var i = 0; i < Buffer._bufferWidth; i++)
+        // push the first row
+        for(var i = 0; i < width; i++)
         {
-            localQueue.enqueue(queue.dequeue());
+            var p = allPagesQ.dequeue();
+            rowQ.enqueue(p);
+            // sneak the first row back on to the end of the all pages Q so
+            // that the final row gets linked to the first row
+            allPagesQ.enqueue(p);
         }
 
-        for(i = 0; i < Buffer._bufferWidth-1; i++)
+        // iterate rows
+        for(i = 0; i < width; i++)
         {
-            var nextQueue = new Queue();
+            var nextRowQ = new Queue();
 
-            localQueue.enqueue(localQueue.peek());
+            // make the first page in the row appear at the beginning and end
+            // this ensures that the final page in the row gets linked to the first
+            rowQ.enqueue(rowQ.peek());
 
-            for(var j = 0; j < Buffer._bufferWidth; j++)
+            // iterate columns
+            for(var j = 0; j < width; j++)
             {
-                var thisPage = localQueue.dequeue();
+                var page = rowQ.dequeue();
 
-                console.log(thisPage);
+                page.r = rowQ.peek();
+                page.r.l = page;
+                page.d = allPagesQ.dequeue();
+                page.d.u = page;
 
-                thisPage.r = localQueue.peek();
-                thisPage.r.l = thisPage;
-                thisPage.d = queue.dequeue();
-                thisPage.d.u = thisPage;
+                console.log(page);
 
-                nextQueue.enqueue(thisPage.d);
+                nextRowQ.enqueue(page.d);
             }
 
-            localQueue = nextQueue;
+            rowQ = nextRowQ;
         }
     };
 
