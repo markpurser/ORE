@@ -15,12 +15,14 @@
 this.ORE = this.ORE || {};
 
 (function () {
-    function Buffer(playerPos, pageWidth, pageHeight)
+    function Buffer(viewPos, pageWidth, pageHeight)
     {
         this._pageWidth = pageWidth;
         this._pageHeight = pageHeight;
 
-        this.initialise(playerPos);
+        this._geoCache = {geoCode:null, page:null};
+
+        this.initialise(viewPos);
 
         console.log("Hello from Buffer constructor");
     }
@@ -30,19 +32,100 @@ this.ORE = this.ORE || {};
     Buffer._bufferWidth = 6;
     Buffer._numPages = Buffer._bufferWidth * Buffer._bufferWidth;
 
-    p.initialise = function(playerPos)
+    p.initialise = function(viewPos)
     {
+        // makes the buffer into a grid graph of pages
         this.makeGridGraph();
 
-        this.fillGeoCodes(playerPos);
+        // identify all pages with a geo code
+        this.fillGeoCodes(viewPos);
+
+        // fill page data with random cells
+        this.fillBufferTestData();
 
         console.log("Hello from Buffer::initialise");
     };
 
-    // Fill pages with geo codes
-    p.fillGeoCodes = function(playerPos)
+    p.getTileCode = function(pos)
     {
-        var tempPos = {x: playerPos.x - this._pageWidth*2, y: playerPos.y - this._pageHeight*2};
+        var geoCode = this.geoCode(pos);
+        var page;
+
+        if(_.isEqual(geoCode, this._geoCache.geoCode))
+        {
+            page = this._geoCache.page;
+        }
+        else {
+            page = this.findPage(geoCode);
+            this._geoCache.geoCode = geoCode;
+            this._geoCache.page = page;
+        }
+
+        var tileCode = 63;
+
+        if(page)
+        {
+            var offset = { x: pos.x - geoCode.x, y: pos.y - geoCode.y };
+            tileCode = page.data[offset.x + offset.y * this._pageWidth];
+        }
+
+        return tileCode;
+    };
+
+    p.findPage = function(geoCode)
+    {
+        var width = Buffer._bufferWidth;
+        var page = this._buffer[0];
+
+        for(var i = 0; i < width; i++)
+        {
+            for(var j = 0; j < width; j++)
+            {
+                if(_.isEqual(page.geoCode, geoCode))
+                {
+                    return page;
+                }
+                page = page.r;
+            }
+            page = page.d;
+        }
+
+        return null;
+    };
+
+    p.fillBufferTestData = function()
+    {
+        var width = Buffer._bufferWidth;
+        var page = this._buffer[0];
+        var cellValue = 0;
+
+        for(var i = 0; i < width; i++)
+        {
+            for(var j = 0; j < width; j++)
+            {
+                this.fillPageTestData(page, cellValue);
+                page = page.r;
+                cellValue++;
+            }
+            page = page.d;
+        }
+    };
+
+    p.fillPageTestData = function(page, cellValue)
+    {
+        for(var x = 0; x < this._pageWidth; x++)
+        {
+            for(var y = 0; y < this._pageHeight; y++)
+            {
+                page.data[x + y * this._pageWidth] = cellValue;
+            }
+        }
+    };
+
+    // Fill pages with geo codes
+    p.fillGeoCodes = function(viewPos)
+    {
+        var tempPos = {x: viewPos.x - this._pageWidth*2, y: viewPos.y - this._pageHeight*2};
         var startx = tempPos.x;
 
         var width = Buffer._bufferWidth;
@@ -53,6 +136,8 @@ this.ORE = this.ORE || {};
             for(var j = 0; j < width; j++)
             {
                 page.geoCode = this.geoCode(tempPos);
+
+                console.log(page.geoCode);
 
                 tempPos.x += this._pageWidth;
                 page = page.r;
@@ -69,7 +154,7 @@ this.ORE = this.ORE || {};
         return {
             x: pos.x - ( pos.x % this._pageWidth ),
             y: pos.y - ( pos.y % this._pageHeight )
-        }
+        };
     };
 
     // Create an undirected grid graph consisting of page nodes
@@ -124,8 +209,6 @@ this.ORE = this.ORE || {};
                 page.d = nextRowPage;
                 page.d.u = page;
 
-                console.log(page);
-
                 nextRowQ.enqueue(nextRowPage);
             }
 
@@ -135,4 +218,4 @@ this.ORE = this.ORE || {};
 
     ORE.Buffer = Buffer;
 
-})();
+}());

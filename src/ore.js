@@ -21,14 +21,16 @@ this.ORE = this.ORE || {};
     {
         this._renderingCanvas = oreOptions.canvas;
 
+        this._keyboard = new Keyboard();
+
         var tileWidthPx = oreOptions.tileWidthPx;
         var tileHeightPx = oreOptions.tileHeightPx;
 
         var mapViewWidth = oreOptions.mapViewWidth;
         var mapViewHeight = oreOptions.mapViewHeight;
 
-        var initPlayerPos = { x:2060, y:2070 };
-        this._buffer = new ORE.Buffer(initPlayerPos, mapViewWidth, mapViewHeight);
+        var viewPos = { x:2060, y:2070 };
+        this._buffer = new ORE.Buffer(viewPos, mapViewWidth, mapViewHeight);
 
         var loader = PIXI.loader;
         loader.add('tilesheet', oreOptions.tilesheetImage);
@@ -53,18 +55,15 @@ this.ORE = this.ORE || {};
             parentContainer.addChild(gameViewContainer);
             parentContainer.addChild(stats.fpsText);
 
-            var playerX = 0;
-
-            // position of 'view'
-            var bufferX = 16;
-            var bufferY = 16;
+            var playerX = viewPos.x * tileWidthPx;
+            var playerY = viewPos.y * tileHeightPx;
 
             // create a renderer instance
             var pixiOptions = {
                 clearBeforeRender: true,
                 preserveDrawingBuffer: false,
                 resolution: 1,
-                view: this._renderingCanvas
+                view: ORE._renderingCanvas
             };
 
             ORE._renderer = PIXI.autoDetectRenderer(0, 0, pixiOptions);
@@ -120,20 +119,47 @@ this.ORE = this.ORE || {};
                     ORE.updateStats(stats);
                 }
 
-                playerX++;
+                if(ORE._keyboard.isKeyPressed(Keyboard.KEYS.UP))
+                {
+                    playerY--;
+                }
 
-                bufferX = playerX >> 4;
+                if(ORE._keyboard.isKeyPressed(Keyboard.KEYS.DOWN))
+                {
+                    playerY++;
+                }
+
+                if(ORE._keyboard.isKeyPressed(Keyboard.KEYS.LEFT))
+                {
+                    playerX--;
+                }
+
+                if(ORE._keyboard.isKeyPressed(Keyboard.KEYS.RIGHT))
+                {
+                    playerX++;
+                }
+
+                viewPos.x = playerX >> 4;
+                viewPos.y = playerY >> 4;
                 var scrollX = playerX & 15;
+                var scrollY = playerY & 15;
                 gameViewContainer.position.x = -scrollX;
+                gameViewContainer.position.y = -scrollY;
+
+                var tempViewPos = { x:viewPos.x, y:viewPos.y };
 
                 for(var y = 0; y < mapViewHeight; y++)
                 {
-                    var offset = bufferX + (y + bufferY) * bufferWidth;
+//                    var offset = bufferX + (y + bufferY) * bufferWidth;
                     for(var x = 0; x < mapViewWidth; x++)
                     {
-                        var tileCode = buffer[offset++];
+                        var tileCode = ORE._buffer.getTileCode(tempViewPos);
                         sprites[x + y * mapViewWidth].texture = tileTextures[tileCode];
+
+                        tempViewPos.x++;
                     }
+                    tempViewPos.y++;
+                    tempViewPos.x = viewPos.x;
                 }
 
                 requestAnimationFrame(animate);
