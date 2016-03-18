@@ -27,7 +27,8 @@ this.ORE = this.ORE || {};
         var mapViewWidth = oreOptions.mapViewWidth;
         var mapViewHeight = oreOptions.mapViewHeight;
 
-        this._buffer = new ORE.Buffer(mapViewWidth, mapViewHeight);
+        var initPlayerPos = { x:2060, y:2070 };
+        this._buffer = new ORE.Buffer(initPlayerPos, mapViewWidth, mapViewHeight);
 
         var loader = PIXI.loader;
         loader.add('tilesheet', oreOptions.tilesheetImage);
@@ -118,6 +119,12 @@ this.ORE = this.ORE || {};
                 {
                     ORE.updateStats(stats);
                 }
+
+                playerX++;
+
+                bufferX = playerX >> 4;
+                var scrollX = playerX & 15;
+                gameViewContainer.position.x = -scrollX;
 
                 for(var y = 0; y < mapViewHeight; y++)
                 {

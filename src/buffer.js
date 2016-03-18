@@ -9,18 +9,18 @@
 /**
 * @module Buffer
 *
-* Implements a multi-directional look-ahead buffer
+* Implements a multi-directional cyclic look-ahead buffer
 */
 
 this.ORE = this.ORE || {};
 
 (function () {
-    function Buffer(pageWidth, pageHeight)
+    function Buffer(playerPos, pageWidth, pageHeight)
     {
         this._pageWidth = pageWidth;
         this._pageHeight = pageHeight;
 
-        this.initialise();
+        this.initialise(playerPos);
 
         console.log("Hello from Buffer constructor");
     }
@@ -30,43 +30,78 @@ this.ORE = this.ORE || {};
     Buffer._bufferWidth = 6;
     Buffer._numPages = Buffer._bufferWidth * Buffer._bufferWidth;
 
-    p.initialise = function()
+    p.initialise = function(playerPos)
     {
         this.makeGridGraph();
+
+        this.fillGeoCodes(playerPos);
 
         console.log("Hello from Buffer::initialise");
     };
 
-    // Create an undirected grid graph of pages
+    // Fill pages with geo codes
+    p.fillGeoCodes = function(playerPos)
+    {
+        var tempPos = {x: playerPos.x - this._pageWidth*2, y: playerPos.y - this._pageHeight*2};
+        var startx = tempPos.x;
+
+        var width = Buffer._bufferWidth;
+        var page = this._buffer[0];
+
+        for(var i = 0; i < width; i++)
+        {
+            for(var j = 0; j < width; j++)
+            {
+                page.geoCode = this.geoCode(tempPos);
+
+                tempPos.x += this._pageWidth;
+                page = page.r;
+            }
+
+            tempPos.x = startx;
+            tempPos.y += this._pageHeight;
+            page = page.d;
+        }
+    };
+
+    p.geoCode = function(pos)
+    {
+        return {
+            x: pos.x - ( pos.x % this._pageWidth ),
+            y: pos.y - ( pos.y % this._pageHeight )
+        }
+    };
+
+    // Create an undirected grid graph consisting of page nodes
     p.makeGridGraph = function()
     {
-        var queue = new Queue();
+        var pagesQ = new Queue();
         this._buffer = [];
 
         for(var i = 0; i < Buffer._numPages; i++)
         {
-            var page = { id: 'page-'+i, data: [], l: null, r: null, u: null, d: null };
+            var page = { id: 'page-'+i, data: [], stale: true, l: null, r: null, u: null, d: null };
             this._buffer.push(page);
-            queue.enqueue(page);
+            pagesQ.enqueue(page);
         }
 
-        this.makeAdjacencyList(queue);
+        this.linkAdjacencyProperties(pagesQ);
     };
 
-    p.makeAdjacencyList = function(allPagesQ)
+    // Link the left, right, up and down (l,r,u,d) adjacency list of each page
+    p.linkAdjacencyProperties = function(pagesQ)
     {
         var rowQ = new Queue();
-        var adjacencyList = [];
         var width = Buffer._bufferWidth;
 
         // push the first row
         for(var i = 0; i < width; i++)
         {
-            var p = allPagesQ.dequeue();
+            var p = pagesQ.dequeue();
             rowQ.enqueue(p);
-            // sneak the first row back on to the end of the all pages Q so
+            // rotate the first row back on to the end of the pagesQ so
             // that the final row gets linked to the first row
-            allPagesQ.enqueue(p);
+            pagesQ.enqueue(p);
         }
 
         // iterate rows
@@ -74,7 +109,7 @@ this.ORE = this.ORE || {};
         {
             var nextRowQ = new Queue();
 
-            // make the first page in the row appear at the beginning and end
+            // add the first page in the row to the end
             // this ensures that the final page in the row gets linked to the first
             rowQ.enqueue(rowQ.peek());
 
@@ -82,15 +117,16 @@ this.ORE = this.ORE || {};
             for(var j = 0; j < width; j++)
             {
                 var page = rowQ.dequeue();
+                var nextRowPage = pagesQ.dequeue();
 
                 page.r = rowQ.peek();
                 page.r.l = page;
-                page.d = allPagesQ.dequeue();
+                page.d = nextRowPage;
                 page.d.u = page;
 
                 console.log(page);
 
-                nextRowQ.enqueue(page.d);
+                nextRowQ.enqueue(nextRowPage);
             }
 
             rowQ = nextRowQ;
