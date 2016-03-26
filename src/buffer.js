@@ -46,30 +46,46 @@ this.ORE = this.ORE || {};
         console.log("Hello from Buffer::initialise");
     };
 
-    p.getTileCode = function(pos)
+    p.fastTileCode = function(pos, sprites, tileTextures)
     {
         var geoCode = this.geoCode(pos);
-        var page;
-
-        if(_.isEqual(geoCode, this._geoCache.geoCode))
-        {
-            page = this._geoCache.page;
-        }
-        else {
-            page = this.findPage(geoCode);
-            this._geoCache.geoCode = geoCode;
-            this._geoCache.page = page;
-        }
-
-        var tileCode = 63;
+        var leftPage = this.findPage(geoCode);
+        var page = leftPage;
 
         if(page)
         {
+            var edge = { x: this._pageWidth, y: this._pageHeight };
             var offset = { x: pos.x - geoCode.x, y: pos.y - geoCode.y };
-            tileCode = page.data[offset.x + offset.y * this._pageWidth];
-        }
 
-        return tileCode;
+            var y = offset.y;
+
+            for(var i = 0; i < edge.y; i++)
+            {
+                var x = offset.x;
+
+                for(var j = 0; j < edge.x; j++)
+                {
+                    tileCode = page.data[x + y * this._pageWidth];
+                    sprites[j + i * this._pageWidth].texture = tileTextures[tileCode];
+
+                    x++;
+                    if( x == edge.x )
+                    {
+                        x = 0;
+                        page = page.r;
+                    }
+                }
+
+                y++;
+                if( y == edge.y )
+                {
+                    y = 0;
+                    leftPage = leftPage.d;
+                }
+
+                page = leftPage;
+            }
+        }
     };
 
     p.findPage = function(geoCode)

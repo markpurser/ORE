@@ -70,7 +70,7 @@ this.ORE = this.ORE || {};
             ORE._renderer.backgroundColor = 0x66ff99;
 
             // add the renderer view element to the DOM
-            document.body.appendChild(ORE._renderer.view);
+            //document.body.appendChild(ORE._renderer.view);
 
 
             // init tile textures
@@ -146,21 +146,7 @@ this.ORE = this.ORE || {};
                 gameViewContainer.position.x = -scrollX;
                 gameViewContainer.position.y = -scrollY;
 
-                var tempViewPos = { x:viewPos.x, y:viewPos.y };
-
-                for(var y = 0; y < mapViewHeight; y++)
-                {
-//                    var offset = bufferX + (y + bufferY) * bufferWidth;
-                    for(var x = 0; x < mapViewWidth; x++)
-                    {
-                        var tileCode = ORE._buffer.getTileCode(tempViewPos);
-                        sprites[x + y * mapViewWidth].texture = tileTextures[tileCode];
-
-                        tempViewPos.x++;
-                    }
-                    tempViewPos.y++;
-                    tempViewPos.x = viewPos.x;
-                }
+                ORE._buffer.fastTileCode(viewPos, sprites, tileTextures);
 
                 requestAnimationFrame(animate);
 
