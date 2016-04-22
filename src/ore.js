@@ -30,8 +30,9 @@ this.ORE = this.ORE || {};
         var spriteGridWidth = oreOptions.viewWidth;
         var spriteGridHeight = oreOptions.viewHeight;
 
+        var bufferSize = 6;
         var viewPos = { x:2060, y:2070 };
-        this._buffer = new ORE.Buffer(viewPos, spriteGridWidth, spriteGridHeight);
+        this._buffer = new ORE.Buffer(viewPos, spriteGridWidth, spriteGridHeight, bufferSize);
 
         var loader = PIXI.loader;
         loader.add('tilesheet', oreOptions.tilesheetImage);
@@ -46,7 +47,6 @@ this.ORE = this.ORE || {};
             var numTilesX = resources.tilesheet.texture.width / tileWidthPx;
             var numTilesY = resources.tilesheet.texture.height / tileHeightPx;
 
-            var bufferSize = 6;
             var bufferWidth = spriteGridWidth * bufferSize;
             var bufferHeight = spriteGridHeight * bufferSize;
 
@@ -92,7 +92,7 @@ this.ORE = this.ORE || {};
             ORE._renderer.backgroundColor = 0x66ff99;
 
             // create a renderer instance
-            var pixiOptions2 = {
+            var pixiDebugOptions = {
                 clearBeforeRender: true,
                 preserveDrawingBuffer: false,
                 resolution: 2,
@@ -100,7 +100,7 @@ this.ORE = this.ORE || {};
             };
 
             ORE._debugRenderer = PIXI.autoDetectRenderer(
-                oreOptions.debugCanvasSize.width, oreOptions.debugCanvasSize.height, pixiOptions2);
+                oreOptions.debugCanvasSize.width, oreOptions.debugCanvasSize.height, pixiDebugOptions);
             ORE._debugRenderer.backgroundColor = 0xaa4444;
 
             // add the renderer view element to the DOM
@@ -144,6 +144,8 @@ this.ORE = this.ORE || {};
                 worldSpriteContainer.position.y = -scrollY;
 
                 ORE._buffer.fastTileCode(viewPos, worldSprites, tileTextures);
+
+                ORE._buffer.updateDebugDisplay(viewPos, debugSprites, tileTextures);
 
                 requestAnimationFrame(animate);
 

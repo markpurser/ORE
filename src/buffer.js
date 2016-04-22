@@ -15,12 +15,14 @@
 this.ORE = this.ORE || {};
 
 (function () {
-    function Buffer(viewPos, pageWidth, pageHeight)
+    function Buffer(viewPos, pageWidth, pageHeight, bufferSize)
     {
         this._pageWidth = pageWidth;
         this._pageHeight = pageHeight;
+        this._bufferSize = bufferSize;
+        this._numPages = bufferSize * bufferSize;
 
-        this._geoCache = {geoCode:null, page:null};
+        this._firstPass = true;
 
         this.initialise(viewPos);
 
@@ -28,9 +30,6 @@ this.ORE = this.ORE || {};
     }
 
     var p = Buffer.prototype;
-
-    Buffer._bufferWidth = 6;
-    Buffer._numPages = Buffer._bufferWidth * Buffer._bufferWidth;
 
     p.initialise = function(viewPos)
     {
@@ -46,14 +45,71 @@ this.ORE = this.ORE || {};
         console.log("Hello from Buffer::initialise");
     };
 
+    p.updateDebugDisplay = function(pos, sprites, tileTextures)
+    {
+        var size = this._bufferSize;
+        var page = this._buffer[0];
+
+        for(var i = 0; i < size; i++)
+        {
+            for(var j = 0; j < size; j++)
+            {
+                var tex = tileTextures[0];
+
+                if(page.stale)
+                {
+                    tex = tileTextures[1];
+                }
+
+                sprites[j + i * size].texture = tex;
+
+                page = page.r;
+            }
+            page = page.d;
+        }
+
+        var geoCode = this.geoCode(pos);
+
+        var f = this.findPage(geoCode);
+
+        if(f.page)
+        {
+            sprites[f.x + f.y * size].texture = tileTextures[2];
+        }
+    };
+
     p.fastTileCode = function(pos, sprites, tileTextures)
     {
         var geoCode = this.geoCode(pos);
-        var leftPage = this.findPage(geoCode);
-        var page = leftPage;
+
+        if(this._firstPass)
+        {
+            this._geoCache = geoCode;
+            this._firstPass = false;
+        }
+
+        var page = this.findPage(geoCode).page;
+        var leftPage = page;
 
         if(page)
         {
+            if(!_.isEqual(this._geoCache, geoCode))
+            {
+                var p = page.r.r.u.u;
+                for(var k = 0; k < 5; k++)
+                {
+                    console.log("Stale");
+                    var gc = p.l.geoCode;
+                    console.log("Old gc=" + p.geoCode.x + " " + p.geoCode.y);
+                    gc.x += this._pageWidth;
+                    p.geoCode = gc;
+                    console.log("New gc=" + p.geoCode.x + " " + p.geoCode.y);
+                    p.stale = true;
+                    p = p.d;
+                }
+                this._geoCache = geoCode;
+            }
+
             var edge = { x: this._pageWidth, y: this._pageHeight };
             var offset = { x: pos.x - geoCode.x, y: pos.y - geoCode.y };
 
@@ -90,34 +146,34 @@ this.ORE = this.ORE || {};
 
     p.findPage = function(geoCode)
     {
-        var width = Buffer._bufferWidth;
+        var size = this._bufferSize;
         var page = this._buffer[0];
 
-        for(var i = 0; i < width; i++)
+        for(var i = 0; i < size; i++)
         {
-            for(var j = 0; j < width; j++)
+            for(var j = 0; j < size; j++)
             {
                 if(_.isEqual(page.geoCode, geoCode))
                 {
-                    return page;
+                    return {x: j, y: i, page: page};
                 }
                 page = page.r;
             }
             page = page.d;
         }
 
-        return null;
+        return {x: -1, y: -1, page: null};
     };
 
     p.fillBufferTestData = function()
     {
-        var width = Buffer._bufferWidth;
+        var size = this._bufferSize;
         var page = this._buffer[0];
         var cellValue = 0;
 
-        for(var i = 0; i < width; i++)
+        for(var i = 0; i < size; i++)
         {
-            for(var j = 0; j < width; j++)
+            for(var j = 0; j < size; j++)
             {
                 this.fillPageTestData(page, cellValue);
                 page = page.r;
@@ -144,12 +200,12 @@ this.ORE = this.ORE || {};
         var tempPos = {x: viewPos.x - this._pageWidth*2, y: viewPos.y - this._pageHeight*2};
         var startx = tempPos.x;
 
-        var width = Buffer._bufferWidth;
+        var size = this._bufferSize;
         var page = this._buffer[0];
 
-        for(var i = 0; i < width; i++)
+        for(var i = 0; i < size; i++)
         {
-            for(var j = 0; j < width; j++)
+            for(var j = 0; j < size; j++)
             {
                 page.geoCode = this.geoCode(tempPos);
 
@@ -179,9 +235,9 @@ this.ORE = this.ORE || {};
         var pagesQ = new Queue();
         this._buffer = [];
 
-        for(var i = 0; i < Buffer._numPages; i++)
+        for(var i = 0; i < this._numPages; i++)
         {
-            var page = { id: 'page-'+i, data: [], stale: true, l: null, r: null, u: null, d: null };
+            var page = { id: 'page-'+i, data: [], stale: false, l: null, r: null, u: null, d: null };
             this._buffer.push(page);
             pagesQ.enqueue(page);
         }
@@ -193,10 +249,10 @@ this.ORE = this.ORE || {};
     p.linkAdjacencyProperties = function(pagesQ)
     {
         var rowQ = new Queue();
-        var width = Buffer._bufferWidth;
+        var size = this._bufferSize;
 
         // push the first row
-        for(var i = 0; i < width; i++)
+        for(var i = 0; i < size; i++)
         {
             var p = pagesQ.dequeue();
             rowQ.enqueue(p);
@@ -206,7 +262,7 @@ this.ORE = this.ORE || {};
         }
 
         // iterate rows
-        for(i = 0; i < width; i++)
+        for(i = 0; i < size; i++)
         {
             var nextRowQ = new Queue();
 
@@ -215,7 +271,7 @@ this.ORE = this.ORE || {};
             rowQ.enqueue(rowQ.peek());
 
             // iterate columns
-            for(var j = 0; j < width; j++)
+            for(var j = 0; j < size; j++)
             {
                 var page = rowQ.dequeue();
                 var nextRowPage = pagesQ.dequeue();
