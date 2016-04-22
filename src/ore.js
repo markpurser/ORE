@@ -19,18 +19,19 @@ this.ORE = this.ORE || {};
 (function () {
     ORE.init = function (oreOptions)
     {
-        this._renderingCanvas = oreOptions.canvas;
+        this._renderingCanvas = oreOptions.renderCanvas;
+        this._debugCanvas = oreOptions.debugCanvas;
 
         this._keyboard = new Keyboard();
 
         var tileWidthPx = oreOptions.tileWidthPx;
         var tileHeightPx = oreOptions.tileHeightPx;
 
-        var mapViewWidth = oreOptions.mapViewWidth;
-        var mapViewHeight = oreOptions.mapViewHeight;
+        var spriteGridWidth = oreOptions.viewWidth;
+        var spriteGridHeight = oreOptions.viewHeight;
 
         var viewPos = { x:2060, y:2070 };
-        this._buffer = new ORE.Buffer(viewPos, mapViewWidth, mapViewHeight);
+        this._buffer = new ORE.Buffer(viewPos, spriteGridWidth, spriteGridHeight);
 
         var loader = PIXI.loader;
         loader.add('tilesheet', oreOptions.tilesheetImage);
@@ -45,14 +46,34 @@ this.ORE = this.ORE || {};
             var numTilesX = resources.tilesheet.texture.width / tileWidthPx;
             var numTilesY = resources.tilesheet.texture.height / tileHeightPx;
 
-            var bufferWidth = mapViewWidth * 6;
-            var bufferHeight = mapViewHeight * 6;
+            var bufferSize = 6;
+            var bufferWidth = spriteGridWidth * bufferSize;
+            var bufferHeight = spriteGridHeight * bufferSize;
+
+            // init tile textures
+            var tileTextures = [];
+            _.range(numTilesX).forEach(function(x)
+            {
+                _.range(numTilesY).forEach(function(y)
+                {
+                    var rect = new PIXI.Rectangle(x * tileWidthPx, y * tileHeightPx, tileWidthPx, tileHeightPx);
+                    tileTextures[x + y * numTilesX] = new PIXI.Texture(resources.tilesheet.texture, rect);
+                });
+            });
 
             // create a new instance of a pixi container
-            var gameViewContainer = new PIXI.Container();
             var parentContainer = new PIXI.Container();
 
-            parentContainer.addChild(gameViewContainer);
+            var worldSprites = [];    
+            var worldSpriteContainer = ORE.SpriteGrid(
+                spriteGridWidth, spriteGridHeight, tileWidthPx, tileHeightPx, tileTextures[0], worldSprites);
+
+            var debugSprites = [];    
+            var debugSpriteContainer = ORE.SpriteGrid(
+                bufferSize, bufferSize, tileWidthPx, tileHeightPx, tileTextures[0], debugSprites);
+
+
+            parentContainer.addChild(worldSpriteContainer);
             parentContainer.addChild(stats.fpsText);
 
             var playerX = viewPos.x * tileWidthPx;
@@ -66,49 +87,25 @@ this.ORE = this.ORE || {};
                 view: ORE._renderingCanvas
             };
 
-            ORE._renderer = PIXI.autoDetectRenderer(0, 0, pixiOptions);
+            ORE._renderer = PIXI.autoDetectRenderer(
+                oreOptions.renderCanvasSize.width, oreOptions.renderCanvasSize.height, pixiOptions);
             ORE._renderer.backgroundColor = 0x66ff99;
+
+            // create a renderer instance
+            var pixiOptions2 = {
+                clearBeforeRender: true,
+                preserveDrawingBuffer: false,
+                resolution: 2,
+                view: ORE._debugCanvas
+            };
+
+            ORE._debugRenderer = PIXI.autoDetectRenderer(
+                oreOptions.debugCanvasSize.width, oreOptions.debugCanvasSize.height, pixiOptions2);
+            ORE._debugRenderer.backgroundColor = 0xaa4444;
 
             // add the renderer view element to the DOM
             //document.body.appendChild(ORE._renderer.view);
 
-
-            // init tile textures
-            var tileTextures = [];
-            _.range(numTilesX).forEach(function(x)
-            {
-                _.range(numTilesY).forEach(function(y)
-                {
-                    var rect = new PIXI.Rectangle(x * tileWidthPx, y * tileHeightPx, tileWidthPx, tileHeightPx);
-                    tileTextures[x + y * numTilesX] = new PIXI.Texture(resources.tilesheet.texture, rect);
-                });
-            });
-
-            // init tile buffer
-            var buffer = [];
-            _.range(bufferWidth).forEach(function(x)
-            {
-                _.range(bufferHeight).forEach(function(y)
-                {
-                    buffer[x + y * bufferWidth] = _.random(63);
-                });
-            });
-
-            // init game sprites
-            var sprites = [];    
-            _.range(mapViewWidth).forEach(function(x)
-            {
-                _.range(mapViewHeight).forEach(function(y)
-                {
-                    var sprite = new PIXI.Sprite(tileTextures[0]);
-                    sprite.position.x = x * tileWidthPx;
-                    sprite.position.y = y * tileHeightPx;
-                    sprite.width = tileWidthPx;
-                    sprite.height = tileHeightPx;
-                    sprites[x + y * mapViewWidth] = sprite;
-                    gameViewContainer.addChild(sprite);
-                });
-            });
 
             requestAnimationFrame(animate);
 
@@ -143,15 +140,16 @@ this.ORE = this.ORE || {};
                 viewPos.y = playerY >> 4;
                 var scrollX = playerX & 15;
                 var scrollY = playerY & 15;
-                gameViewContainer.position.x = -scrollX;
-                gameViewContainer.position.y = -scrollY;
+                worldSpriteContainer.position.x = -scrollX;
+                worldSpriteContainer.position.y = -scrollY;
 
-                ORE._buffer.fastTileCode(viewPos, sprites, tileTextures);
+                ORE._buffer.fastTileCode(viewPos, worldSprites, tileTextures);
 
                 requestAnimationFrame(animate);
 
                 // render
                 ORE._renderer.render(parentContainer);
+                ORE._debugRenderer.render(debugSpriteContainer);
             }
         });
     };

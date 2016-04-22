@@ -20,11 +20,14 @@
             padding: 0;
             background-color: #000000;
         }
+        #render-canvas { border:1px solid #ccc }
+        #debug-canvas { border:1px solid #ccc }
     </style>
 
 </head>
 <body onload="init();">
-    <canvas id="render-canvas" width="100" height="1000"></canvas>
+    <canvas id="render-canvas"></canvas>
+    <canvas id="debug-canvas"></canvas>
 
     <script src="js/vendor/pixi-3.0.9.js"></script>
     <script src="js/vendor/lodash.min.4.5.1.js"></script>
@@ -36,12 +39,15 @@
         function init()
         {
             ORE.init({
-                canvas: document.getElementById("render-canvas"),
+                renderCanvas: document.getElementById("render-canvas"),
+                renderCanvasSize: {width: 600, height: 400},
+                debugCanvas: document.getElementById("debug-canvas"),
+                debugCanvasSize: {width: 200, height: 200},
                 tilesheetImage: "assets/terminal.png",
                 tileWidthPx: 16,
                 tileHeightPx: 16,
-                mapViewWidth: 256,
-                mapViewHeight: 128,
+                viewWidth: 32,
+                viewHeight: 32,
                 displayStats: true
             });
         }
